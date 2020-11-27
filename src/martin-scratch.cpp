@@ -8,7 +8,7 @@ int status = WL_IDLE_STATUS;
 char ssid[] = "martin06m"; //  your network SSID (name)
 char pass[] = "mathea06m"; // your network password
 char adafruitUsername[] = "mendozamartin";
-char adafruitKey[] = "aio_SMnI673pqwDkasTv1VB3IXVmgmjF";
+char adafruitKey[] = "aio_XAvI08MHCVVq60Qjz8sUceF3OicR";
 char server[] = "io.adafruit.com";
 int port = 1883;
 int pushButton;
@@ -22,6 +22,11 @@ int isWashingHandsTemp = isWashingHands;
 int washCount = 0;
 int userCount = 0;
 int improperWashCount = 0;
+
+int soapCount = 10; // variables for my soap thing goes hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+int butVal = 0;
+int butValPrev = 0;
+int soapUsers = 0;
 
 unsigned long startTime;
 int timeElapsed;
@@ -74,7 +79,7 @@ void setup()
 
 void loop()
 {
-  char msgBuffer[20]; // make sure this is big enough to hold your string
+  char msgBuffer[50]; // make sure this is big enough to hold your string
 
   // // put your main code here, to run repeatedly:
   if (!mqttClient.connected())
@@ -127,6 +132,28 @@ void loop()
 
   isWashingHandsTemp = isWashingHands;
 
+  butVal = mcp.digitalRead(12);
+
+  if ((butVal == 1) && (butValPrev == 0))
+  {
+    if (soapCount > 0)
+    {
+      soapCount--;
+      soapUsers++;
+      Serial.print("soap level is currently: ");
+      mqttClient.publish("mendozanmartin/feeds/smart-sink.soap-level", dtostrf(soapCount, 6, 2, msgBuffer));
+      mqttClient.publish("mendozanmartin/feeds/smart-sink.use-soap", dtostrf(soapUsers, 6, 2, msgBuffer));
+      Serial.println(soapCount);
+    }
+    else
+    {
+      Serial.print("soap level is currently: ");
+      Serial.print(soapCount);
+      Serial.println("   dat shii eMPTYY");
+    }
+  }
+
+  butValPrev = butVal;
   delay(250);
 }
 
@@ -165,15 +192,15 @@ void connectToMQTT()
     delay(2000);
   }
 
-  boolean isSubscribed = mqttClient.subscribe("mendozamartin/feeds/outlet-valve", 1);
-  boolean isSubscribed2 = mqttClient.subscribe("mendozamartin/feeds/inlet-valve", 1);
+  // boolean isSubscribed = mqttClient.subscribe("mendozamartin/feeds/outlet-valve", 1);
+  // boolean isSubscribed2 = mqttClient.subscribe("mendozamartin/feeds/inlet-valve", 1);
 
-  if (isSubscribed)
-  {
-    Serial.println("MQTT client is subscribed to topic");
-  }
-  else
-  {
-    Serial.println("MQTT client is not subscribed to topic");
-  }
+  // if (isSubscribed)
+  // {
+  //   Serial.println("MQTT client is subscribed to topic");
+  // }
+  // else
+  // {
+  //   Serial.println("MQTT client is not subscribed to topic");
+  // }
 }
