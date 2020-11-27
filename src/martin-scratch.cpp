@@ -8,7 +8,7 @@ int status = WL_IDLE_STATUS;
 char ssid[] = "martin06m"; //  your network SSID (name)
 char pass[] = "mathea06m"; // your network password
 char adafruitUsername[] = "mendozamartin";
-char adafruitKey[] = "aio_XAvI08MHCVVq60Qjz8sUceF3OicR";
+char adafruitKey[] = "aio_PHBB05c5oO497Ir8BJu7DpeUjopF";
 char server[] = "io.adafruit.com";
 int port = 1883;
 int pushButton;
@@ -16,13 +16,16 @@ int pushButton;
 int vacancy = 1;
 int vacancyTemp = vacancy;
 
+int washedHands = 0;
 int isWashingHands = 0;
 int isWashingHandsTemp = isWashingHands;
 
 int washCount = 0;
+int noWashCount = 0;
 int userCount = 0;
 int improperWashCount = 0;
 
+int usedSoap = 0;
 int soapCount = 10; // variables for my soap thing goes hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 int butVal = 0;
 int butValPrev = 0;
@@ -101,12 +104,29 @@ void loop()
   {
     mqttClient.publish("mendozamartin/feeds/smart-sink.vacancy", dtostrf(vacancy, 6, 2, msgBuffer));
     Serial.println("Someone has left the washroom");
+
+    if (washedHands == 0)
+    {
+      noWashCount += 1;
+      mqttClient.publish("mendozamartin/feeds/smart-sink.no-wash", dtostrf(noWashCount, 6, 2, msgBuffer));
+    }
+
+    if (usedSoap == 0 || timeElapsed < 20)
+    {
+      improperWashCount += 1;
+      mqttClient.publish("mendozamartin/feeds/smart-sink.improper-wash", dtostrf(improperWashCount, 6, 2, msgBuffer));
+    }
+
+    usedSoap = 0;
+    washedHands = 0;
   }
   vacancyTemp = vacancy;
 
   isWashingHands = mcp.digitalRead(9); // read hand washing switch on pin 9
+
   if (isWashingHands == 1 && isWashingHandsTemp == 0)
   {
+    washedHands = 1;
     washCount += 1;
     Serial.println("User started to wash their hands");
     mqttClient.publish("mendozamartin/feeds/smart-sink.wash-hands", dtostrf(washCount, 6, 2, msgBuffer));
@@ -118,31 +138,23 @@ void loop()
     }
     timeElapsed = (millis() - startTime) / 1000;
     Serial.println(timeElapsed);
-    mqttClient.publish("mendozanmartin/feeds/smart-sink.amount-washed", dtostrf(timeElapsed, 6, 2, msgBuffer));
+    mqttClient.publish("mendozamartin/feeds/smart-sink.amount-washed", dtostrf(timeElapsed, 6, 2, msgBuffer));
     Serial.println("User has stopped washing their hands.");
-
-    delay(250);
-    if (timeElapsed < 20)
-    {
-      improperWashCount += 1;
-      mqttClient.publish("mendozanmartin/feeds/smart-sink.improper-wash", dtostrf(improperWashCount, 6, 2, msgBuffer));
-      Serial.println("User has not washed hands enough times.");
-    }
   }
 
   isWashingHandsTemp = isWashingHands;
 
   butVal = mcp.digitalRead(12);
-
   if ((butVal == 1) && (butValPrev == 0))
   {
+    usedSoap = 1;
     if (soapCount > 0)
     {
       soapCount--;
       soapUsers++;
       Serial.print("soap level is currently: ");
-      mqttClient.publish("mendozanmartin/feeds/smart-sink.soap-level", dtostrf(soapCount, 6, 2, msgBuffer));
-      mqttClient.publish("mendozanmartin/feeds/smart-sink.use-soap", dtostrf(soapUsers, 6, 2, msgBuffer));
+      mqttClient.publish("mendozamartin/feeds/smart-sink.soap-level", dtostrf(soapCount, 6, 2, msgBuffer));
+      mqttClient.publish("mendozamartin/feeds/smart-sink.use-soap", dtostrf(soapUsers, 6, 2, msgBuffer));
       Serial.println(soapCount);
     }
     else
@@ -154,7 +166,6 @@ void loop()
   }
 
   butValPrev = butVal;
-  delay(250);
 }
 
 void callback(char *topic, byte *payload, unsigned int length)
